@@ -14,7 +14,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 const MONGO_URI = process.env.MONGO_URI;
 // الاتصال بقاعدة البيانات (استبدل الرابط برابط قاعدة بياناتك أو عيّن المتغير البيئي MONGO_URI)
-mongoose.connect(MONGO_URI, {
+mongoose.connect(MONGODB_URI, {
     serverSelectionTimeoutMS: 5000,
     bufferCommands: false
 })
