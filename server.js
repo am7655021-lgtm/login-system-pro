@@ -41,41 +41,30 @@ const sentiment = new Sentiment();
 app.post('/api/contact', async (req, res) => {
     try {
         const { email, message } = req.body;
-        
-        // تحليل المشاعر باستخدام المكتبة اللي سطبناها
         const analysis = sentiment.analyze(message);
-        
-        // إنشاء سجل جديد في قاعدة البيانات
         const newContact = new Contact({
-            email: email,
-            message: message,
+            email,
+            message,
             status: analysis.score >= 0 ? 'Positive' : 'Negative'
         });
-
-        // حفظ الرسالة فعلياً
-        await newContact.save(); 
-
-        // الرد على المتصفح بالنجاح عشان الرسالة تختفي عند صاحبك
-        res.status(200).json({ message: "تم إرسال رسالتك بنجاح!" });
-        
+        await newContact.save();
+        res.status(200).json({ message: "Sent successfully" });
     } catch (error) {
-        console.error("خطأ في السيرفر:", error);
-        res.status(500).json({ error: "فشل في حفظ الرسالة" });
+        res.status(500).json({ error: "Server error" });
     }
 });
 
+app.get('/api/messages', async (req, res) => {
     try {
-        if (!isDbConnected()) {
-            return res.status(503).send({ status: 'Error', message: 'MongoDB غير متصل. يرجى تشغيل قاعدة البيانات أولاً.' });
-        }
-
-        await Contact.create(messageData);
-        res.send({ status: 'Success', message: 'Message saved!' });
-    } catch (err) {
-        console.error('Failed to save contact message:', err.message);
-        res.status(500).send({ status: 'Error', message: 'Could not save message' });
+        const messages = await Contact.find().sort({ date: -1 });
+        res.json(messages);
+    } catch (error) {
+        res.status(500).json({ error: "Error fetching messages" });
     }
 });
+
+const PORT = 5005;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 const PORT = 5005;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
