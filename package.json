@@ -1,0 +1,17 @@
+{
+  "name": "first-program",
+  "version": "1.0.0",
+  "description": "Simple HTML server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.18.2",
+    "mongoose": "^7.5.0",
+    "sentiment": "^5.0.2"
+  }
+}
