@@ -8,7 +8,7 @@ if (contactForm) {
         const message = document.getElementById('userMessage').value;
 
         try {
-            const response = await fetch('/api/messages', {
+            const response = await fetch('/api/contact', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, message })
