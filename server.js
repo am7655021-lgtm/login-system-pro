@@ -39,13 +39,30 @@ const Sentiment = require('sentiment');
 const sentiment = new Sentiment();
 
 app.post('/api/contact', async (req, res) => {
-    const analysis = sentiment.analyze(req.body.message); // تحليل المشاعر
-    const messageData = {
-        email: req.body.email,
-        message: req.body.message,
-        status: analysis.score >= 0 ? 'Positive' : 'Negative',
-        date: new Date()
-    };
+    try {
+        const { email, message } = req.body;
+        
+        // تحليل المشاعر باستخدام المكتبة اللي سطبناها
+        const analysis = sentiment.analyze(message);
+        
+        // إنشاء سجل جديد في قاعدة البيانات
+        const newContact = new Contact({
+            email: email,
+            message: message,
+            status: analysis.score >= 0 ? 'Positive' : 'Negative'
+        });
+
+        // حفظ الرسالة فعلياً
+        await newContact.save(); 
+
+        // الرد على المتصفح بالنجاح عشان الرسالة تختفي عند صاحبك
+        res.status(200).json({ message: "تم إرسال رسالتك بنجاح!" });
+        
+    } catch (error) {
+        console.error("خطأ في السيرفر:", error);
+        res.status(500).json({ error: "فشل في حفظ الرسالة" });
+    }
+});
 
     try {
         if (!isDbConnected()) {
