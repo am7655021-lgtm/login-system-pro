@@ -15,8 +15,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 const MONGODB_URI = process.env.MONGODB_URI;
 // الاتصال بقاعدة البيانات (استبدل الرابط برابط قاعدة بياناتك أو عيّن المتغير البيئي MONGO_URI)
 mongoose.connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 5000,
-    bufferCommands: false
+    serverSelectionTimeoutMS: 30000,
+    bufferCommands: true
 })
     .then(() => console.log("Connected to MongoDB..."))
     .catch(err => console.error("Could not connect to MongoDB...", err.message));
