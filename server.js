@@ -8,13 +8,17 @@ const cors = require('cors');
 // استخدم خوادم DNS عامة قوية لحل مشكلات SRV في Node.js
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
-const app = express();
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-const MONGODB_URI = process.env.MONGODB_URI;
-// الاتصال بقاعدة البيانات (استبدل الرابط برابط قاعدة بياناتك أو عيّن المتغير البيئي MONGO_URI)
-mongoose.connect(MONGODB_URI, {
+// تعديل الاتصال ليكون متوافق مع Vercel
+if (mongoose.connections[0].readyState) {
+    console.log("Using existing MongoDB connection...");
+} else {
+    mongoose.connect(MONGODB_URI, {
+        serverSelectionTimeoutMS: 5000,
+        bufferCommands: false, 
+    })
+    .then(() => console.log("Connected to MongoDB..."))
+    .catch(err => console.error("Could not connect to MongoDB...", err.message));
+}
     serverSelectionTimeoutMS: 30000,
     bufferCommands: true
 })
