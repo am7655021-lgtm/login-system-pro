@@ -4,6 +4,8 @@ const path = require('path');
 const dns = require('dns');
 const mongoose = require('mongoose');
 const cors = require('cors');
+app.use(express.json());
+app.use(express.static(__dirname));
 
 // استخدم خوادم DNS عامة قوية لحل مشكلات SRV في Node.js
 dns.setServers(['8.8.8.8', '8.8.4.4']);
@@ -87,3 +89,4 @@ app.post('/api/login', (req, res) => {
         res.json({ success: false });
     }
 });
+module.exports = app;
