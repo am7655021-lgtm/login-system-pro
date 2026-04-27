@@ -8,22 +8,16 @@ const cors = require('cors');
 // استخدم خوادم DNS عامة قوية لحل مشكلات SRV في Node.js
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
-// تعديل الاتصال ليكون متوافق مع Vercel
 if (mongoose.connections[0].readyState) {
     console.log("Using existing MongoDB connection...");
 } else {
     mongoose.connect(MONGODB_URI, {
         serverSelectionTimeoutMS: 5000,
-        bufferCommands: false, 
+        bufferCommands: false,
     })
     .then(() => console.log("Connected to MongoDB..."))
     .catch(err => console.error("Could not connect to MongoDB...", err.message));
 }
-    serverSelectionTimeoutMS: 30000,
-    bufferCommands: true
-})
-    .then(() => console.log("Connected to MongoDB..."))
-    .catch(err => console.error("Could not connect to MongoDB...", err.message));
 
 const isDbConnected = () => mongoose.connection.readyState === 1;
 
@@ -86,7 +80,7 @@ const ADMIN_PASS = "12345"; // غيرها لشيء أصعب!
 
 app.post('/api/login', (req, res) => {
     const { user, pass } = req.body;
-    
+
     if (user === ADMIN_USER && pass === ADMIN_PASS) {
         res.json({ success: true });
     } else {
