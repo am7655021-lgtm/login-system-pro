@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const fs = require('fs').promises;
+const os = require('os');
 const dns = require('dns');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -42,6 +44,8 @@ app.get('/script.js', (req, res) => {
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/mydb';
+const fallbackFile = path.join(os.tmpdir(), 'messages-fallback.json');
+
 if (!process.env.MONGODB_URI && process.env.NODE_ENV === 'production') {
     console.warn("MONGODB_URI is not set in production. Vercel cannot connect to a local MongoDB instance.");
 }
@@ -57,6 +61,22 @@ if (mongoose.connections[0].readyState) {
 }
 
 const isDbConnected = () => mongoose.connection.readyState === 1;
+
+async function readFallbackMessages() {
+    try {
+        const data = await fs.readFile(fallbackFile, 'utf8');
+        return JSON.parse(data);
+    } catch (err) {
+        return [];
+    }
+}
+
+async function saveFallbackMessage(message) {
+    const messages = await readFallbackMessages();
+    messages.push(message);
+    await fs.writeFile(fallbackFile, JSON.stringify(messages, null, 2), 'utf8');
+    return messages;
+}
 
 // إنشاء نموذج للبيانات (مثلاً رسائل التواصل)
 const ContactSchema = new mongoose.Schema({
@@ -74,24 +94,28 @@ const sentiment = new Sentiment();
 
 app.post('/api/contact', async (req, res) => {
     try {
-        if (!isDbConnected()) {
-            console.error('MongoDB not connected when /api/contact was called');
-            return res.status(503).json({ error: 'MongoDB not connected. Please set MONGODB_URI.' });
-        }
-
         const { email, message } = req.body;
         if (!email || !message) {
             return res.status(400).json({ error: 'Email and message are required.' });
         }
 
         const analysis = sentiment.analyze(message);
-        const newContact = new Contact({
+        const contactData = {
             email,
             message,
-            status: analysis.score >= 0 ? 'Positive' : 'Negative'
-        });
-        await newContact.save();
-        return res.status(200).json({ message: 'Sent successfully' });
+            status: analysis.score >= 0 ? 'Positive' : 'Negative',
+            date: new Date()
+        };
+
+        if (isDbConnected()) {
+            const newContact = new Contact(contactData);
+            await newContact.save();
+            return res.status(200).json({ message: 'Sent successfully' });
+        }
+
+        await saveFallbackMessage(contactData);
+        console.warn('MongoDB unavailable: saved contact message to fallback file.');
+        return res.status(200).json({ message: 'Sent successfully (saved locally)' });
     } catch (error) {
         console.error('Contact save error:', error);
         return res.status(500).json({ error: error.message || 'Server error' });
@@ -100,11 +124,12 @@ app.post('/api/contact', async (req, res) => {
 
 app.get('/api/messages', async (req, res) => {
     try {
-        if (!isDbConnected()) {
-            console.error('MongoDB not connected when /api/messages was called');
-            return res.status(503).json({ error: 'MongoDB not connected. Please set MONGODB_URI.' });
+        if (isDbConnected()) {
+            const messages = await Contact.find().sort({ date: -1 });
+            return res.json(messages);
         }
-        const messages = await Contact.find().sort({ date: -1 });
+
+        const messages = await readFallbackMessages();
         return res.json(messages);
     } catch (err) {
         console.error('Failed to retrieve messages:', err.message);
