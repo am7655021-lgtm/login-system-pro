@@ -58,27 +58,21 @@ app.post('/api/contact', async (req, res) => {
 
 app.get('/api/messages', async (req, res) => {
     try {
-        const messages = await Contact.find().sort({ date: -1 });
-        res.json(messages);
-    } catch (error) {
-        res.status(500).json({ error: "Error fetching messages" });
-    }
-});
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-app.get('/api/messages', async (req, res) => {
-    try {
         if (!isDbConnected()) {
             return res.status(503).send("MongoDB غير متصل. يرجى تشغيل قاعدة البيانات أولاً.");
         }
-
-        const messages = await Contact.find().sort({ date: -1 });
-        res.json(messages);
+        const messages = await Contact.find();
+        res.send(messages);
     } catch (err) {
-        res.status(500).send("Error fetching messages");
+        console.error('Failed to retrieve messages:', err.message);
+        res.status(500).send({ status: 'Error', message: 'Could not retrieve messages' });
     }
 });
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 // بيانات الدخول (يفضل مستقبلاً وضعها في قاعدة البيانات)
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "12345"; // غيرها لشيء أصعب!
@@ -92,4 +86,5 @@ app.post('/api/login', (req, res) => {
         res.json({ success: false });
     }
 });
+
 module.exports = app;
