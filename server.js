@@ -4,6 +4,9 @@ const path = require('path');
 const dns = require('dns');
 const mongoose = require('mongoose');
 const cors = require('cors');
+
+const app = express();
+app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
@@ -13,7 +16,7 @@ dns.setServers(['8.8.8.8', '8.8.4.4']);
 if (mongoose.connections[0].readyState) {
     console.log("Using existing MongoDB connection...");
 } else {
-    mongoose.connect(MONGODB_URI, {
+    mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mydb', {
         serverSelectionTimeoutMS: 5000,
         bufferCommands: false,
     })
