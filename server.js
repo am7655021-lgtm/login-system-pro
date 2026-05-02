@@ -1,8 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const fs = require('fs').promises;
-const os = require('os');
 const dns = require('dns');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -44,8 +42,6 @@ app.get('/script.js', (req, res) => {
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/mydb';
-const fallbackFile = path.join(os.tmpdir(), 'messages-fallback.json');
-
 if (!process.env.MONGODB_URI && process.env.NODE_ENV === 'production') {
     console.warn("MONGODB_URI is not set in production. Vercel cannot connect to a local MongoDB instance.");
 }
@@ -62,21 +58,19 @@ if (mongoose.connections[0].readyState) {
 
 const isDbConnected = () => mongoose.connection.readyState === 1;
 
-async function readFallbackMessages() {
-    try {
-        const data = await fs.readFile(fallbackFile, 'utf8');
-        return JSON.parse(data);
-    } catch (err) {
-        return [];
-    }
-}
+// تخزين مؤقت للرسائل عندما لا يكون MongoDB متاحاً
+// ملاحظة: هذه الرسائل تُمسح عند إعادة نشر التطبيق
+let fallbackMessages = [];
 
-async function saveFallbackMessage(message) {
-    const messages = await readFallbackMessages();
-    messages.push(message);
-    await fs.writeFile(fallbackFile, JSON.stringify(messages, null, 2), 'utf8');
-    return messages;
-}
+// إنشاء نموذج للبيانات (مثلاً رسائل التواصل)
+const ContactSchema = new mongoose.Schema({
+    email: String,
+    message: String,
+    status: String,
+    date: { type: Date, default: Date.now }
+});
+
+const Contact = mongoose.model('Contact', ContactSchema);
 
 // إنشاء نموذج للبيانات (مثلاً رسائل التواصل)
 const ContactSchema = new mongoose.Schema({
@@ -113,8 +107,8 @@ app.post('/api/contact', async (req, res) => {
             return res.status(200).json({ message: 'Sent successfully' });
         }
 
-        await saveFallbackMessage(contactData);
-        console.warn('MongoDB unavailable: saved contact message to fallback file.');
+        fallbackMessages.push(contactData);
+        console.warn('MongoDB unavailable: saved contact message to fallback memory.');
         return res.status(200).json({ message: 'Sent successfully (saved locally)' });
     } catch (error) {
         console.error('Contact save error:', error);
@@ -129,8 +123,7 @@ app.get('/api/messages', async (req, res) => {
             return res.json(messages);
         }
 
-        const messages = await readFallbackMessages();
-        return res.json(messages);
+        return res.json(fallbackMessages);
     } catch (err) {
         console.error('Failed to retrieve messages:', err.message);
         return res.status(500).json({ error: 'Could not retrieve messages' });
