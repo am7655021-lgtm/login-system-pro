@@ -27,6 +27,15 @@ app.get('/admin.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
+// Serve static files explicitly
+app.get('/style.css', (req, res) => {
+    res.sendFile(path.join(__dirname, 'style.css'));
+});
+
+app.get('/script.js', (req, res) => {
+    res.sendFile(path.join(__dirname, 'script.js'));
+});
+
 // استخدم خوادم DNS عامة قوية لحل مشكلات SRV في Node.js
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
