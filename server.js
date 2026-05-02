@@ -67,7 +67,6 @@ const ContactSchema = new mongoose.Schema({
 });
 
 const Contact = mongoose.model('Contact', ContactSchema);
-const fallbackMessages = [];
 
 // نقطة نهاية (API Endpoint) لاستقبال البيانات من الواجهة الأمامية
 const Sentiment = require('sentiment');
@@ -75,41 +74,41 @@ const sentiment = new Sentiment();
 
 app.post('/api/contact', async (req, res) => {
     try {
-        const { email, message } = req.body;
-        const analysis = sentiment.analyze(message || '');
-        const contactData = {
-            email: email || 'unknown',
-            message: message || '',
-            status: analysis.score >= 0 ? 'Positive' : 'Negative',
-            date: new Date()
-        };
-
-        if (isDbConnected()) {
-            const newContact = new Contact(contactData);
-            await newContact.save();
-            return res.status(200).json({ message: "Sent successfully" });
+        if (!isDbConnected()) {
+            console.error('MongoDB not connected when /api/contact was called');
+            return res.status(503).json({ error: 'MongoDB not connected. Please set MONGODB_URI.' });
         }
 
-        fallbackMessages.push(contactData);
-        console.warn('MongoDB unavailable: saving contact message to fallback memory.');
-        return res.status(200).json({ message: "Sent successfully (stored locally)" });
+        const { email, message } = req.body;
+        if (!email || !message) {
+            return res.status(400).json({ error: 'Email and message are required.' });
+        }
+
+        const analysis = sentiment.analyze(message);
+        const newContact = new Contact({
+            email,
+            message,
+            status: analysis.score >= 0 ? 'Positive' : 'Negative'
+        });
+        await newContact.save();
+        return res.status(200).json({ message: 'Sent successfully' });
     } catch (error) {
         console.error('Contact save error:', error);
-        return res.status(200).json({ message: "Sent successfully (stored locally)" });
+        return res.status(500).json({ error: error.message || 'Server error' });
     }
 });
 
 app.get('/api/messages', async (req, res) => {
     try {
-        if (isDbConnected()) {
-            const messages = await Contact.find();
-            return res.send(messages);
+        if (!isDbConnected()) {
+            console.error('MongoDB not connected when /api/messages was called');
+            return res.status(503).json({ error: 'MongoDB not connected. Please set MONGODB_URI.' });
         }
-
-        return res.send(fallbackMessages);
+        const messages = await Contact.find().sort({ date: -1 });
+        return res.json(messages);
     } catch (err) {
         console.error('Failed to retrieve messages:', err.message);
-        return res.send(fallbackMessages);
+        return res.status(500).json({ error: 'Could not retrieve messages' });
     }
 });
 
@@ -126,5 +125,12 @@ app.post('/api/login', (req, res) => {
         res.json({ success: false });
     }
 });
+
+const PORT = process.env.PORT || 5000;
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
 
 module.exports = app;
