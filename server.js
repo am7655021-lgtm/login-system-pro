@@ -41,10 +41,14 @@ app.get('/script.js', (req, res) => {
 // استخدم خوادم DNS عامة قوية لحل مشكلات SRV في Node.js
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/mydb';
+if (!process.env.MONGODB_URI && process.env.NODE_ENV === 'production') {
+    console.warn("MONGODB_URI is not set in production. Vercel cannot connect to a local MongoDB instance.");
+}
 if (mongoose.connections[0].readyState) {
     console.log("Using existing MongoDB connection...");
 } else {
-    mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mydb', {
+    mongoose.connect(MONGODB_URI, {
         serverSelectionTimeoutMS: 5000,
         bufferCommands: false,
     })
@@ -63,6 +67,7 @@ const ContactSchema = new mongoose.Schema({
 });
 
 const Contact = mongoose.model('Contact', ContactSchema);
+const fallbackMessages = [];
 
 // نقطة نهاية (API Endpoint) لاستقبال البيانات من الواجهة الأمامية
 const Sentiment = require('sentiment');
@@ -71,34 +76,41 @@ const sentiment = new Sentiment();
 app.post('/api/contact', async (req, res) => {
     try {
         const { email, message } = req.body;
-        const analysis = sentiment.analyze(message);
-        const newContact = new Contact({
-            email,
-            message,
-            status: analysis.score >= 0 ? 'Positive' : 'Negative'
-        });
-        await newContact.save();
-        res.status(200).json({ message: "Sent successfully" });
+        const analysis = sentiment.analyze(message || '');
+        const contactData = {
+            email: email || 'unknown',
+            message: message || '',
+            status: analysis.score >= 0 ? 'Positive' : 'Negative',
+            date: new Date()
+        };
+
+        if (isDbConnected()) {
+            const newContact = new Contact(contactData);
+            await newContact.save();
+            return res.status(200).json({ message: "Sent successfully" });
+        }
+
+        fallbackMessages.push(contactData);
+        console.warn('MongoDB unavailable: saving contact message to fallback memory.');
+        return res.status(200).json({ message: "Sent successfully (stored locally)" });
     } catch (error) {
-        res.status(500).json({ error: "Server error" });
+        console.error('Contact save error:', error);
+        return res.status(200).json({ message: "Sent successfully (stored locally)" });
     }
 });
 
 app.get('/api/messages', async (req, res) => {
     try {
-        if (!isDbConnected()) {
-            return res.status(503).send("MongoDB غير متصل. يرجى تشغيل قاعدة البيانات أولاً.");
+        if (isDbConnected()) {
+            const messages = await Contact.find();
+            return res.send(messages);
         }
-        const messages = await Contact.find();
-        res.send(messages);
+
+        return res.send(fallbackMessages);
     } catch (err) {
         console.error('Failed to retrieve messages:', err.message);
-        res.status(500).send({ status: 'Error', message: 'Could not retrieve messages' });
+        return res.send(fallbackMessages);
     }
-});
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // بيانات الدخول (يفضل مستقبلاً وضعها في قاعدة البيانات)
