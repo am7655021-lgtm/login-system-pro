@@ -10,6 +10,34 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
+const ContactSchema = new mongoose.Schema({
+    email: String,
+    message: String,
+    status: String,
+    date: { type: Date, default: Date.now }
+}, { collection: 'contacts' });
+
+const UserSchema = new mongoose.Schema({
+    email: String
+});
+
+let Message;
+let User;
+
+try {
+    Message = mongoose.models.Message || mongoose.model('Message', ContactSchema);
+} catch (error) {
+    console.error('Could not initialize Message model:', error.message);
+}
+
+try {
+    User = mongoose.models.User || mongoose.model('User', UserSchema);
+} catch (error) {
+    console.error('Could not initialize User model:', error.message);
+}
+
+const Contact = Message;
+
 // Routes for HTML pages
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
@@ -41,19 +69,20 @@ app.get('/script.js', (req, res) => {
 // استخدم خوادم DNS عامة قوية لحل مشكلات SRV في Node.js
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/mydb';
-if (!process.env.MONGODB_URI && process.env.NODE_ENV === 'production') {
-    console.warn("MONGODB_URI is not set in production. Vercel cannot connect to a local MongoDB instance.");
-}
-if (mongoose.connections[0].readyState) {
-    console.log("Using existing MongoDB connection...");
+const MONGODB_URI = process.env.MONGODB_URI;
+if (MONGODB_URI) {
+    if (mongoose.connections[0].readyState) {
+        console.log("Using existing MongoDB connection...");
+    } else {
+        mongoose.connect(MONGODB_URI, {
+            serverSelectionTimeoutMS: 5000,
+            bufferCommands: false,
+        })
+        .then(() => console.log("Connected to MongoDB..."))
+        .catch(err => console.error("Could not connect to MongoDB...", err.message));
+    }
 } else {
-    mongoose.connect(MONGODB_URI, {
-        serverSelectionTimeoutMS: 5000,
-        bufferCommands: false,
-    })
-    .then(() => console.log("Connected to MongoDB..."))
-    .catch(err => console.error("Could not connect to MongoDB...", err.message));
+    console.log("No MONGODB_URI set, skipping MongoDB connection.");
 }
 
 const isDbConnected = () => mongoose.connection.readyState === 1;
@@ -61,26 +90,6 @@ const isDbConnected = () => mongoose.connection.readyState === 1;
 // تخزين مؤقت للرسائل عندما لا يكون MongoDB متاحاً
 // ملاحظة: هذه الرسائل تُمسح عند إعادة نشر التطبيق
 let fallbackMessages = [];
-
-// إنشاء نموذج للبيانات (مثلاً رسائل التواصل)
-const ContactSchema = new mongoose.Schema({
-    email: String,
-    message: String,
-    status: String,
-    date: { type: Date, default: Date.now }
-});
-
-const Contact = mongoose.model('Contact', ContactSchema);
-
-// إنشاء نموذج للبيانات (مثلاً رسائل التواصل)
-const ContactSchema = new mongoose.Schema({
-    email: String,
-    message: String,
-    status: String,
-    date: { type: Date, default: Date.now }
-});
-
-const Contact = mongoose.model('Contact', ContactSchema);
 
 // نقطة نهاية (API Endpoint) لاستقبال البيانات من الواجهة الأمامية
 const Sentiment = require('sentiment');
@@ -127,6 +136,22 @@ app.get('/api/messages', async (req, res) => {
     } catch (err) {
         console.error('Failed to retrieve messages:', err.message);
         return res.status(500).json({ error: 'Could not retrieve messages' });
+    }
+});
+
+app.get('/api/admin-stats', async (req, res) => {
+    try {
+        const totalMessages = isDbConnected() && typeof Message !== 'undefined'
+            ? await Message.countDocuments()
+            : fallbackMessages.length;
+        const totalUsers = isDbConnected() && typeof User !== 'undefined'
+            ? await User.countDocuments()
+            : 0;
+
+        return res.json({ totalMessages, totalUsers });
+    } catch (error) {
+        console.error('Failed to get admin stats:', error);
+        return res.status(500).json({ error: error.message || 'Could not retrieve admin stats' });
     }
 });
 

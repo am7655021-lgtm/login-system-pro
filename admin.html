@@ -18,9 +18,8 @@
     <div class="admin-container">
         <h1>Welcome Back, Admin</h1>
         <div class="stats-grid">
-            <div class="stat-card"><h3>Total Messages</h3><p id="msg-count">0</p></div>
-            <div class="stat-card"><h3>Total Revenue</h3><p>$1,250</p></div>
-            <div class="stat-card"><h3>AI Queries</h3><p>452</p></div>
+            <div class="stat-card"><h3>Total Users</h3><p id="total-users-count">0</p></div>
+            <div class="stat-card"><h3>Total Messages</h3><p id="total-messages-count">0</p></div>
         </div>
 
         <h2>Recent Messages</h2>
@@ -43,11 +42,21 @@ if (localStorage.getItem('adminLoggedIn') !== 'true') {
     window.location.href = 'login.html';
 }
         // كود بسيط لجلب البيانات من السيرفر الذي سننشئه
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/admin-stats');
+                const data = await response.json();
+                document.getElementById('total-users-count').innerText = data.totalUsers;
+                document.getElementById('total-messages-count').innerText = data.totalMessages;
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
         async function loadMessages() {
-            const response = await fetch('http://localhost:5000/api/messages');
+            const response = await fetch('/api/messages');
             const messages = await response.json();
             const tableBody = document.getElementById('messages-table');
-            document.getElementById('msg-count').innerText = messages.length;
 
             tableBody.innerHTML = messages.map(msg => `
                 <tr>
@@ -57,6 +66,7 @@ if (localStorage.getItem('adminLoggedIn') !== 'true') {
                 </tr>
             `).join('');
         }
+        loadStats();
         loadMessages();
     </script>
 </body>
