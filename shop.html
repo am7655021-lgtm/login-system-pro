@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop | Northstar Supply</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="shop-page">
+    <nav class="store-nav">
+        <a class="store-logo" href="/shop.html"><span>NS</span> Northstar Supply</a>
+        <div class="store-links">
+            <a class="active" href="#products">Products</a>
+            <a href="#orders">My Orders</a>
+            <a class="cart-link" href="#cart">Cart <b data-cart-count>0</b></a>
+            <button id="logoutButton" class="logout-button" type="button">Log out</button>
+        </div>
+    </nav>
+    <main class="shop-main">
+        <section class="shop-heading" id="products">
+            <div><p class="eyebrow">The September edit</p><h1>Useful things,<br><em>beautifully made.</em></h1></div>
+            <p class="shop-note">A small collection of technology and desk essentials chosen for a calmer, sharper everyday.</p>
+        </section>
+        <div class="catalog-tools"><span>06 pieces</span><button type="button">Sort: Featured <span>⌄</span></button></div>
+        <section class="product-grid" id="productGrid" aria-label="Products"></section>
+    </main>
+    <footer class="store-footer"><span>Northstar Supply</span><span>Thoughtful objects for everyday work.</span></footer>
+    <script src="script.js"></script>
+</body>
+</html>
