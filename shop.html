@@ -13,7 +13,7 @@
         <div class="store-links">
             <a class="active" href="#products">Products</a>
             <a href="#orders">My Orders</a>
-            <a class="cart-link" href="#cart">Cart <b data-cart-count>0</b></a>
+            <button class="cart-link cart-open" type="button">Cart <b data-cart-count>0</b></button>
             <button id="logoutButton" class="logout-button" type="button">Log out</button>
         </div>
     </nav>
@@ -30,6 +30,21 @@
         <div class="catalog-tools"><span>06 pieces</span><button type="button">Sort: Featured <span>⌄</span></button></div>
         <section class="product-grid" id="productGrid" aria-label="Products"></section>
     </main>
+    <div class="cart-overlay" id="cartOverlay" hidden></div>
+    <aside class="cart-drawer" id="cartDrawer" aria-label="Shopping cart" aria-hidden="true">
+        <div class="cart-header"><h2>Your cart</h2><button class="cart-close" type="button" aria-label="Close cart">&times;</button></div>
+        <div id="cartItems" class="cart-items"></div>
+        <div class="cart-summary"><span>Total</span><strong id="cartTotal">$0</strong></div>
+        <form id="checkoutForm" class="checkout-form">
+            <h3>Delivery details</h3>
+            <label for="checkoutPhone">Phone Number</label><input id="checkoutPhone" name="phone" type="tel" required>
+            <label for="checkoutGovernorate">المحافظة</label><input id="checkoutGovernorate" name="governorate" type="text" required>
+            <label for="checkoutCity">المركز</label><input id="checkoutCity" name="city" type="text" required>
+            <label for="checkoutAddress">Detailed Address</label><textarea id="checkoutAddress" name="address" rows="3" required></textarea>
+            <button class="btn-primary" type="submit">Place order <span>&rarr;</span></button>
+            <p id="checkoutMessage" class="form-message" role="status"></p>
+        </form>
+    </aside>
     <footer class="store-footer"><span>Northstar Supply</span><span>Thoughtful objects for everyday work.</span></footer>
     <script src="script.js"></script>
 </body>

@@ -30,9 +30,22 @@ const ProductSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+const OrderSchema = new mongoose.Schema({
+    customerEmail: { type: String, required: true },
+    phone: { type: String, required: true },
+    governorate: { type: String, required: true },
+    city: { type: String, required: true },
+    address: { type: String, required: true },
+    items: [{ productId: mongoose.Schema.Types.ObjectId, title: String, price: Number, quantity: Number }],
+    totalPrice: { type: Number, required: true },
+    status: { type: String, default: 'Pending' },
+    createdAt: { type: Date, default: Date.now }
+});
+
 let Message;
 let User;
 let Product;
+let Order;
 
 try {
     Message = mongoose.models.Message || mongoose.model('Message', ContactSchema);
@@ -50,6 +63,12 @@ try {
     Product = mongoose.models.Product || mongoose.model('Product', ProductSchema);
 } catch (error) {
     console.error('Could not initialize Product model:', error.message);
+}
+
+try {
+    Order = mongoose.models.Order || mongoose.model('Order', OrderSchema);
+} catch (error) {
+    console.error('Could not initialize Order model:', error.message);
 }
 
 const Contact = Message;
@@ -96,7 +115,8 @@ app.get('/login.html', (req, res) => {
 });
 
 app.get('/admin.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'admin.html'));
+    if (getSessionEmail(req) !== 'admin') return res.redirect('/login.html');
+    return res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
 app.get('/shop.html', (req, res) => {
@@ -244,6 +264,49 @@ app.delete('/api/products/:id', requireAdmin, async (req, res) => {
     } catch (error) {
         console.error('Failed to delete product:', error);
         return res.status(400).json({ error: 'Could not delete product.' });
+    }
+});
+
+app.post('/api/orders', async (req, res) => {
+    try {
+        const customerEmail = getSessionEmail(req);
+        if (!customerEmail) return res.status(401).json({ error: 'Please sign in before checking out.' });
+        if (typeof Order === 'undefined' || typeof Product === 'undefined' || !isDbConnected()) {
+            return res.status(503).json({ error: 'MongoDB is required to place orders.' });
+        }
+
+        const { phone, governorate, city, address, items } = req.body;
+        if (!phone?.trim() || !governorate?.trim() || !city?.trim() || !address?.trim() || !Array.isArray(items) || !items.length) {
+            return res.status(400).json({ error: 'Phone, governorate, city, address, and cart items are required.' });
+        }
+
+        const requestedIds = items.map(item => item.productId).filter(id => mongoose.isValidObjectId(id));
+        const products = await Product.find({ _id: { $in: requestedIds } }).lean();
+        const orderItems = items.map(item => {
+            const product = products.find(value => value._id.toString() === item.productId);
+            const quantity = Number(item.quantity);
+            return product && Number.isInteger(quantity) && quantity > 0
+                ? { productId: product._id, title: product.title, price: product.price, quantity }
+                : null;
+        }).filter(Boolean);
+        if (!orderItems.length || orderItems.length !== items.length) return res.status(400).json({ error: 'One or more cart items are no longer available.' });
+
+        const totalPrice = orderItems.reduce((total, item) => total + item.price * item.quantity, 0);
+        const order = await Order.create({ customerEmail, phone: phone.trim(), governorate: governorate.trim(), city: city.trim(), address: address.trim(), items: orderItems, totalPrice, status: 'Pending' });
+        return res.status(201).json({ success: true, orderId: order._id });
+    } catch (error) {
+        console.error('Failed to create order:', error);
+        return res.status(500).json({ error: 'Could not place your order.' });
+    }
+});
+
+app.get('/api/orders', requireAdmin, async (req, res) => {
+    try {
+        if (typeof Order === 'undefined' || !isDbConnected()) return res.json([]);
+        return res.json(await Order.find().sort({ createdAt: -1 }).lean());
+    } catch (error) {
+        console.error('Failed to retrieve orders:', error);
+        return res.status(500).json({ error: 'Could not retrieve orders.' });
     }
 });
 

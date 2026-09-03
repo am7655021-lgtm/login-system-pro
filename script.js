@@ -8,6 +8,57 @@ const updateCartCount = () => {
     document.querySelectorAll('[data-cart-count]').forEach(element => { element.textContent = count; });
 };
 
+const cartDrawer = document.getElementById('cartDrawer');
+const renderCart = () => {
+    const items = getCart();
+    const cartItems = document.getElementById('cartItems');
+    if (!cartItems) return;
+    cartItems.innerHTML = items.length ? items.map(item => `
+        <div class="cart-item"><div><strong>${item.name}</strong><span>$${Number(item.price).toLocaleString()} each</span></div>
+        <div class="cart-quantity"><button type="button" data-cart-action="decrease" data-cart-id="${item.id}">-</button><span>${item.quantity}</span><button type="button" data-cart-action="increase" data-cart-id="${item.id}">+</button></div></div>`).join('') : '<p class="empty-cart">Your cart is empty.</p>';
+    document.getElementById('cartTotal').textContent = `$${items.reduce((total, item) => total + item.price * item.quantity, 0).toLocaleString()}`;
+    updateCartCount();
+};
+
+document.querySelectorAll('.cart-open').forEach(button => button.addEventListener('click', () => {
+    renderCart();
+    cartDrawer.hidden = false;
+    cartDrawer.setAttribute('aria-hidden', 'false');
+    document.getElementById('cartOverlay').hidden = false;
+}));
+document.querySelectorAll('.cart-close, #cartOverlay').forEach(element => element.addEventListener('click', () => {
+    cartDrawer.hidden = true;
+    cartDrawer.setAttribute('aria-hidden', 'true');
+    document.getElementById('cartOverlay').hidden = true;
+}));
+document.getElementById('cartItems')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-cart-action]');
+    if (!button) return;
+    const cart = getCart();
+    const item = cart.find(value => value.id === button.dataset.cartId);
+    if (item) button.dataset.cartAction === 'increase' ? item.quantity++ : item.quantity--;
+    saveCart(cart.filter(value => value.quantity > 0));
+    renderCart();
+});
+
+const checkoutForm = document.getElementById('checkoutForm');
+if (checkoutForm) checkoutForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const items = getCart();
+    const message = document.getElementById('checkoutMessage');
+    if (!items.length) { message.textContent = 'Add a product before checking out.'; return; }
+    message.textContent = 'Placing your order...';
+    try {
+        const response = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...Object.fromEntries(new FormData(checkoutForm)), items: items.map(item => ({ productId: item.id, quantity: item.quantity })) }) });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Could not place your order.');
+        localStorage.removeItem('northstarCart');
+        renderCart();
+        checkoutForm.reset();
+        message.textContent = 'Order received. We will contact you soon.';
+    } catch (error) { message.textContent = error.message; }
+});
+
 const authForm = document.getElementById('authForm');
 if (authForm) {
     if (localStorage.getItem('storeLoggedIn') === 'true') window.location.replace('/shop.html');
@@ -130,4 +181,11 @@ if (productForm) {
         }
     });
     loadAdminProducts().catch(error => { formMessage.textContent = error.message; });
+}
+
+const ordersTable = document.getElementById('ordersTable');
+if (ordersTable) {
+    fetch('/api/orders').then(response => response.json()).then(orders => {
+        ordersTable.innerHTML = orders.length ? orders.map(order => `<tr><td>${new Date(order.createdAt).toLocaleString()}</td><td>${order.customerEmail}</td><td>${order.phone}</td><td>${order.governorate}, ${order.city}<br>${order.address}</td><td>${order.items.map(item => `${item.title} x${item.quantity}`).join('<br>')}</td><td>$${Number(order.totalPrice).toLocaleString()}<br><span class="order-status">${order.status}</span></td></tr>`).join('') : '<tr><td colspan="6">No orders yet.</td></tr>';
+    }).catch(error => { ordersTable.innerHTML = `<tr><td colspan="6">${error.message}</td></tr>`; });
 }
