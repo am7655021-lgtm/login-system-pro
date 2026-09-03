@@ -122,28 +122,6 @@ const isDbConnected = () => mongoose.connection.readyState === 1;
 // تخزين مؤقت للرسائل عندما لا يكون MongoDB متاحاً
 // ملاحظة: هذه الرسائل تُمسح عند إعادة نشر التطبيق
 let fallbackMessages = [];
-const fallbackUsers = new Map();
-const SESSION_SECRET = process.env.SESSION_SECRET || 'northstar-development-secret';
-
-const hashPassword = password => crypto.createHash('sha256').update(password).digest('hex');
-const createSession = email => {
-    const payload = Buffer.from(JSON.stringify({ email })).toString('base64url');
-    const signature = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
-    return `${payload}.${signature}`;
-};
-const getSessionEmail = req => {
-    const token = req.headers.cookie?.match(/(?:^|; )store_session=([^;]+)/)?.[1];
-    if (!token) return undefined;
-    const [payload, signature] = token.split('.');
-    if (!payload || !signature) return undefined;
-    const expected = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
-    if (signature.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return undefined;
-    try {
-        return JSON.parse(Buffer.from(payload, 'base64url').toString()).email;
-    } catch {
-        return undefined;
-    }
-};
 
 app.post('/api/register', async (req, res) => {
     try {

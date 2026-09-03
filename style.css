@@ -51,6 +51,11 @@ em { color: #8c9c1e; font-style: normal; }
 .cart-link b { background: var(--lime); border-radius: 50%; color: var(--ink); display: inline-grid; font-size: .65rem; height: 19px; margin-left: 3px; place-items: center; width: 19px; }
 .logout-button { background: transparent; border: 1px solid #bfc8bd; border-radius: 2px; color: var(--ink); cursor: pointer; font-size: .8rem; padding: 9px 14px; }
 .shop-main { margin: 0 auto; max-width: 1280px; padding: 9vh 5vw 12vh; }
+.welcome-banner { background: var(--ink); color: var(--white); margin-bottom: 8vh; overflow: hidden; padding: 38px 42px; position: relative; }
+.welcome-banner:after { border: 1px solid #d8ef674d; border-radius: 50%; content: ''; height: 230px; position: absolute; right: -35px; top: -95px; width: 230px; }
+.welcome-banner h1 { font-family: 'Space Grotesk'; font-size: clamp(2rem, 4vw, 4rem); letter-spacing: -.05em; line-height: 1; margin: 12px 0 8px; position: relative; z-index: 1; }
+.welcome-banner .eyebrow { color: var(--lime); }
+.welcome-banner p:last-child { color: #b9c4bd; font-size: .9rem; position: relative; z-index: 1; }
 .shop-heading { align-items: end; display: flex; justify-content: space-between; margin-bottom: 9vh; }
 .shop-heading h1 { font-size: clamp(3.5rem, 7vw, 7rem); margin-bottom: 0; }
 .shop-note { color: var(--muted); max-width: 245px; }

@@ -42,6 +42,7 @@ if (authForm) {
             const result = await response.json();
             if (!response.ok || !result.success) throw new Error(result.error || 'Unable to continue.');
             localStorage.setItem('storeLoggedIn', 'true');
+            localStorage.setItem('storeUserEmail', document.getElementById('authEmail').value.trim());
             window.location.href = '/shop.html';
         } catch (error) {
             message.textContent = error.message;
@@ -52,6 +53,10 @@ if (authForm) {
 const productGrid = document.getElementById('productGrid');
 if (productGrid) {
     if (localStorage.getItem('storeLoggedIn') !== 'true') window.location.replace('/');
+    const welcomeTitle = document.getElementById('welcomeTitle');
+    const email = localStorage.getItem('storeUserEmail');
+    const userName = email ? email.split('@')[0].replace(/[._-]+/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase()) : '';
+    if (welcomeTitle && userName) welcomeTitle.textContent = `Welcome to Disha's store, ${userName}!`;
     productGrid.innerHTML = products.map(product => `
         <article class="product-card">
             <div class="product-image"><img src="${product.image}" alt="${product.name}" loading="lazy"><span>${product.category}</span></div>
@@ -75,6 +80,7 @@ const logoutButton = document.getElementById('logoutButton');
 if (logoutButton) logoutButton.addEventListener('click', async () => {
     await fetch('/api/logout', { method: 'POST' });
     localStorage.removeItem('storeLoggedIn');
+    localStorage.removeItem('storeUserEmail');
     localStorage.removeItem('northstarCart');
     window.location.href = '/';
 });
