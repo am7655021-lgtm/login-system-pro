@@ -22,8 +22,17 @@ const UserSchema = new mongoose.Schema({
     passwordHash: { type: String, required: true }
 });
 
+const ProductSchema = new mongoose.Schema({
+    title: { type: String, required: true, trim: true },
+    price: { type: Number, required: true, min: 0 },
+    description: { type: String, default: '', trim: true },
+    imageUrl: { type: String, default: '' },
+    createdAt: { type: Date, default: Date.now }
+});
+
 let Message;
 let User;
+let Product;
 
 try {
     Message = mongoose.models.Message || mongoose.model('Message', ContactSchema);
@@ -35,6 +44,12 @@ try {
     User = mongoose.models.User || mongoose.model('User', UserSchema);
 } catch (error) {
     console.error('Could not initialize User model:', error.message);
+}
+
+try {
+    Product = mongoose.models.Product || mongoose.model('Product', ProductSchema);
+} catch (error) {
+    console.error('Could not initialize Product model:', error.message);
 }
 
 const Contact = Message;
@@ -59,6 +74,12 @@ const getSessionEmail = req => {
     } catch {
         return undefined;
     }
+};
+const requireAdmin = (req, res, next) => {
+    if (getSessionEmail(req) !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required.' });
+    }
+    return next();
 };
 
 // Routes for HTML pages
@@ -181,6 +202,49 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/logout', (req, res) => {
     res.setHeader('Set-Cookie', 'store_session=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax');
     return res.json({ success: true });
+});
+
+app.get('/api/products', async (req, res) => {
+    try {
+        if (typeof Product === 'undefined' || !isDbConnected()) return res.json([]);
+        const products = await Product.find().sort({ createdAt: -1 }).lean();
+        return res.json(products);
+    } catch (error) {
+        console.error('Failed to retrieve products:', error);
+        return res.status(500).json({ error: 'Could not retrieve products.' });
+    }
+});
+
+app.post('/api/products', requireAdmin, async (req, res) => {
+    try {
+        if (typeof Product === 'undefined' || !isDbConnected()) {
+            return res.status(503).json({ error: 'MongoDB is required to manage products.' });
+        }
+        const { title, price, description, imageUrl } = req.body;
+        const numericPrice = Number(price);
+        if (!title?.trim() || !Number.isFinite(numericPrice) || numericPrice < 0) {
+            return res.status(400).json({ error: 'A product title and valid non-negative price are required.' });
+        }
+        const product = await Product.create({ title: title.trim(), price: numericPrice, description, imageUrl });
+        return res.status(201).json(product);
+    } catch (error) {
+        console.error('Failed to create product:', error);
+        return res.status(500).json({ error: 'Could not create product.' });
+    }
+});
+
+app.delete('/api/products/:id', requireAdmin, async (req, res) => {
+    try {
+        if (typeof Product === 'undefined' || !isDbConnected()) {
+            return res.status(503).json({ error: 'MongoDB is required to manage products.' });
+        }
+        const deleted = await Product.findByIdAndDelete(req.params.id);
+        if (!deleted) return res.status(404).json({ error: 'Product not found.' });
+        return res.json({ success: true });
+    } catch (error) {
+        console.error('Failed to delete product:', error);
+        return res.status(400).json({ error: 'Could not delete product.' });
+    }
 });
 
 // نقطة نهاية (API Endpoint) لاستقبال البيانات من الواجهة الأمامية

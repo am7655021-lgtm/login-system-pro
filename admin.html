@@ -22,6 +22,29 @@
             <div class="stat-card"><h3>Total Messages</h3><p id="total-messages-count">0</p></div>
         </div>
 
+        <section class="admin-product-manager">
+            <div>
+                <p class="eyebrow">Store inventory</p>
+                <h2>Manage products</h2>
+            </div>
+            <form id="productForm" class="product-form">
+                <label for="productTitle">Product Title</label>
+                <input id="productTitle" name="title" type="text" required>
+                <label for="productPrice">Price</label>
+                <input id="productPrice" name="price" type="number" min="0" step="0.01" required>
+                <label for="productDescription">Description</label>
+                <textarea id="productDescription" name="description" rows="3"></textarea>
+                <label for="productImageUrl">Image URL</label>
+                <input id="productImageUrl" name="imageUrl" type="url" placeholder="https://...">
+                <button class="btn-primary" type="submit">Add product <span>&rarr;</span></button>
+                <p id="productFormMessage" class="form-message" role="status"></p>
+            </form>
+            <div>
+                <h3>Current products</h3>
+                <div id="adminProducts" class="admin-products"><p>No products available right now.</p></div>
+            </div>
+        </section>
+
         <h2>Recent Messages</h2>
         <table>
             <thead>
@@ -69,5 +92,6 @@ if (localStorage.getItem('adminLoggedIn') !== 'true') {
         loadStats();
         loadMessages();
     </script>
+    <script src="script.js"></script>
 </body>
 </html>

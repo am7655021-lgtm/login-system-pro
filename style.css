@@ -85,6 +85,18 @@ em { color: #8c9c1e; font-style: normal; }
 table { border-collapse: collapse; width: 100%; }
 th, td { border-bottom: 1px solid var(--line); padding: 15px; text-align: left; }
 th { background: var(--ink); color: var(--lime); }
+.admin-product-manager { background: var(--white); border: 1px solid var(--line); display: grid; gap: 28px; grid-template-columns: .8fr 1fr 1.2fr; margin-bottom: 48px; padding: 28px; }
+.product-form { display: grid; gap: 7px; }
+.product-form label { font-size: .75rem; font-weight: 700; margin-top: 5px; }
+.product-form input, .product-form textarea { border: 1px solid #cbd2c8; border-radius: 2px; padding: 10px; resize: vertical; }
+.product-form .btn-primary { margin-top: 8px; }
+.admin-products { border-top: 1px solid var(--line); margin-top: 12px; }
+.admin-product-row { align-items: center; border-bottom: 1px solid var(--line); display: flex; gap: 12px; justify-content: space-between; padding: 13px 0; }
+.admin-product-row div { display: grid; gap: 2px; }
+.admin-product-row span { color: var(--muted); font-size: .8rem; }
+.delete-product { background: transparent; border: 1px solid #d8b9b2; color: #a54635; cursor: pointer; font-size: .75rem; padding: 7px 10px; }
+.image-placeholder { align-items: center; background: #dfe5d7; color: #8c9c1e; display: flex; font-family: 'Space Grotesk'; font-size: 3rem; height: 100%; justify-content: center; }
+.empty-store { color: var(--muted); grid-column: 1 / -1; padding: 60px 0; text-align: center; }
 
 @media (max-width: 700px) {
      .auth-page { display: block; }
@@ -100,6 +112,7 @@ th { background: var(--ink); color: var(--lime); }
      .product-buy { align-items: flex-start; flex-direction: column; gap: 10px; }
      .store-footer { display: block; line-height: 2; }
      .stats-grid { grid-template-columns: 1fr; }
+    .admin-product-manager { grid-template-columns: 1fr; }
 }
 
 * {
