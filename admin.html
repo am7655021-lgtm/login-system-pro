@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Admin Dashboard | NovaStream</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=1.1">
     <style>
         /* تنسيق سريع للوحة التحكم */
         .admin-container { padding: 50px 10%; }
@@ -21,6 +21,14 @@
             <div class="stat-card"><h3>Total Users</h3><p id="total-users-count">0</p></div>
             <div class="stat-card"><h3>Total Messages</h3><p id="total-messages-count">0</p></div>
         </div>
+
+        <section>
+            <h2>Registered Users</h2>
+            <table>
+                <thead><tr><th>Email</th><th>Account ID</th></tr></thead>
+                <tbody id="usersTable"><tr><td colspan="2">Loading users...</td></tr></tbody>
+            </table>
+        </section>
 
         <section class="admin-product-manager">
             <div>
@@ -103,6 +111,6 @@ if (localStorage.getItem('adminLoggedIn') !== 'true') {
         loadStats();
         loadMessages();
     </script>
-    <script src="script.js"></script>
+    <script src="script.js?v=1.1"></script>
 </body>
 </html>

@@ -76,7 +76,8 @@ if (authForm) {
         const message = document.getElementById('authMessage');
         message.textContent = 'Checking your details...';
         try {
-            const response = await fetch(`/api/${mode}`, {
+            const endpoint = mode === 'register' ? '/api/register' : '/api/login';
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: document.getElementById('authEmail').value, password: document.getElementById('authPassword').value })
@@ -188,4 +189,17 @@ if (ordersTable) {
     fetch('/api/orders').then(response => response.json()).then(orders => {
         ordersTable.innerHTML = orders.length ? orders.map(order => `<tr><td>${new Date(order.createdAt).toLocaleString()}</td><td>${order.customerEmail}</td><td>${order.phone}</td><td>${order.governorate}, ${order.city}<br>${order.address}</td><td>${order.items.map(item => `${item.title} x${item.quantity}`).join('<br>')}</td><td>$${Number(order.totalPrice).toLocaleString()}<br><span class="order-status">${order.status}</span></td></tr>`).join('') : '<tr><td colspan="6">No orders yet.</td></tr>';
     }).catch(error => { ordersTable.innerHTML = `<tr><td colspan="6">${error.message}</td></tr>`; });
+}
+
+const usersTable = document.getElementById('usersTable');
+if (usersTable) {
+    fetch('/api/users')
+        .then(async response => {
+            const users = await response.json();
+            if (!response.ok) throw new Error(users.error || 'Could not load users.');
+            usersTable.innerHTML = users.length
+                ? users.map(user => `<tr><td>${user.email}</td><td>${user._id}</td></tr>`).join('')
+                : '<tr><td colspan="2">No registered users yet.</td></tr>';
+        })
+        .catch(error => { usersTable.innerHTML = `<tr><td colspan="2">${error.message}</td></tr>`; });
 }

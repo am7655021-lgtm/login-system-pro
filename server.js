@@ -20,7 +20,7 @@ const ContactSchema = new mongoose.Schema({
 const UserSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true, lowercase: true },
     passwordHash: { type: String, required: true }
-});
+}, { collection: 'users' });
 
 const ProductSchema = new mongoose.Schema({
     title: { type: String, required: true, trim: true },
@@ -126,7 +126,13 @@ app.get('/shop.html', (req, res) => {
     return res.sendFile(path.join(__dirname, 'shop.html'));
 });
 
-app.use(express.static(__dirname));
+app.use(express.static(__dirname, {
+    setHeaders: res => {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+    }
+}));
 
 // Serve static files explicitly
 app.get('/style.css', (req, res) => {
@@ -143,22 +149,35 @@ app.get('/script.js', (req, res) => {
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const MONGODB_URI = process.env.MONGODB_URI;
+let mongoConnection;
 if (MONGODB_URI) {
     if (mongoose.connections[0].readyState) {
         console.log("Using existing MongoDB connection...");
+        mongoConnection = Promise.resolve();
     } else {
-        mongoose.connect(MONGODB_URI, {
+        mongoConnection = mongoose.connect(MONGODB_URI, {
             serverSelectionTimeoutMS: 5000,
             bufferCommands: false,
         })
-        .then(() => console.log("Connected to MongoDB..."))
-        .catch(err => console.error("Could not connect to MongoDB...", err.message));
+        .then(() => {
+            console.log("Connected to MongoDB...");
+            return true;
+        })
+        .catch(error => {
+            console.error("Could not connect to MongoDB:", error.message);
+            return false;
+        });
     }
 } else {
-    console.log("No MONGODB_URI set, skipping MongoDB connection.");
+    console.error("MONGODB_URI is not set. Registration will remain unavailable.");
 }
 
 const isDbConnected = () => mongoose.connection.readyState === 1;
+const requireMongoConnection = async () => {
+    if (!mongoConnection || !(await mongoConnection) || !isDbConnected()) {
+        throw new Error('MongoDB is unavailable. Check MONGODB_URI and the database connection.');
+    }
+};
 
 // تخزين مؤقت للرسائل عندما لا يكون MongoDB متاحاً
 // ملاحظة: هذه الرسائل تُمسح عند إعادة نشر التطبيق
@@ -172,23 +191,25 @@ app.post('/api/register', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Enter a valid email and a password of at least 6 characters.' });
         }
 
-        if (isDbConnected() && typeof User !== 'undefined') {
-            if (await User.exists({ email })) {
-                return res.status(409).json({ success: false, error: 'An account with that email already exists.' });
-            }
-            await User.create({ email, passwordHash: hashPassword(password) });
-        } else {
-            if (fallbackUsers.has(email)) {
-                return res.status(409).json({ success: false, error: 'An account with that email already exists.' });
-            }
-            fallbackUsers.set(email, hashPassword(password));
+        await requireMongoConnection();
+        if (typeof User === 'undefined') throw new Error('User model is unavailable.');
+        if (await User.exists({ email })) {
+            return res.status(409).json({ success: false, error: 'An account with that email already exists.' });
         }
+        const newUser = new User({ email, passwordHash: hashPassword(password) });
+        await newUser.save();
 
         const token = createSession(email);
         res.setHeader('Set-Cookie', `store_session=${token}; HttpOnly; Path=/; SameSite=Lax`);
         return res.status(201).json({ success: true });
     } catch (error) {
         console.error('Registration error:', error);
+        if (error.code === 11000) {
+            return res.status(409).json({ success: false, error: 'An account with that email already exists.' });
+        }
+        if (error.message.startsWith('MongoDB') || error.message.includes('User model')) {
+            return res.status(503).json({ success: false, error: error.message });
+        }
         return res.status(500).json({ success: false, error: 'Could not create your account.' });
     }
 });
@@ -371,6 +392,18 @@ app.get('/api/admin-stats', async (req, res) => {
     } catch (error) {
         console.error('Failed to get admin stats:', error);
         return res.status(500).json({ error: error.message || 'Could not retrieve admin stats' });
+    }
+});
+
+app.get('/api/users', requireAdmin, async (req, res) => {
+    try {
+        await requireMongoConnection();
+        if (typeof User === 'undefined') throw new Error('User model is unavailable.');
+        const users = await User.find({}, { email: 1, _id: 1 }).sort({ _id: -1 }).lean();
+        return res.json(users);
+    } catch (error) {
+        console.error('Failed to retrieve users:', error);
+        return res.status(503).json({ error: 'Could not retrieve users from MongoDB.' });
     }
 });
 
